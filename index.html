@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nature Collector Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #1E3A5F center/cover no-repeat;
+            overflow: hidden;
+        }
+        canvas {
+            border: 1px solid white;
+            max-width: 100%;
+            max-height: 100%;
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        let player;
+        let fallingObjects = [];
+        let score = 0;
+        let gameState = "menu";
+        let characters = ["green", "blue", "red", "yellow", "purple"];
+        let selectedCharacter = "green";
+        let gravity = 0.5;
+        let moveLeft = false;
+        let moveRight = false;
+        let enemy;
+        let health = 100;
+        let startTime;
+        let elapsedTime = 0;
+        let pauseStartTime = 0;
+        let totalPausedTime = 0;
+        let difficultyLevel = 1;
+        const baseEnemySpeed = 2;
+        const baseObjectSpeed = 3;
+        const baseThrowRate = 60;
+        let inventory = {
+            botella: 0,
+            caja: 0,
+            banano: 0
+        };
+
+        let characterSelectSize = { width: 100, height: 100 };
+        let playerSize = { width: 120, height: 120 };
+        let enemySize = { width: 150, height: 150 };
+
+        let borderColor = "#00d91e";
+        let textColor = "white";
+
+        let playerImg, enemyImg;
+        let characterImages = {};
+
+        let goodObjectsImages = [];
+        let badObjectsImages = [];
+        
+        const objectSize = { width: 50, height: 50 };
+
+        let menuBackground = 'imagenes/fondos/escenariov2.svg';
+        let characterSelectBackground = 'imagenes/fondos/escenariov2.svg';
+        let playingBackgrounds = [
+            'imagenes/fondos/escenariov1.svg',
+            'imagenes/fondos/escenariov2.svg',
+            'imagenes/fondos/escenariov3.svg'
+        ];
+        let currentBackgroundIndex = 0;
+        let currentPlayingBackground = playingBackgrounds[currentBackgroundIndex];
+        let pauseBackground = 'imagenes/fondos/escenariov2.svg';
+        let gameOverBackground = 'imagenes/fondos/escenariov2.svg';
+
+        let maxScore = 0;
+        let playerDead = false;
+        let deathTime = 0;
+        let deathImage;
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight).style('background: transparent');
+            imageMode(CORNER);
+
+            goodObjectsImages = [
+                { img: loadImage('imagenes/assets/botella.gif'), subtype: 'botella' },
+                { img: loadImage('imagenes/assets/caja.gif'), subtype: 'caja' },
+                { img: loadImage('imagenes/assets/HUESO.gif'), subtype: 'hueso' },
+                { img: loadImage('imagenes/assets/banano.gif'), subtype: 'banano' },
+                { img: loadImage('imagenes/assets/gota.png'), subtype: 'cura' }
+            ];
+            
+            badObjectsImages = [
+                loadImage('imagenes/assets/pila.gif'),
+                loadImage('imagenes/assets/papel.gif')
+            ];
+
+            playerImg = loadImage('imagenes/personajes/tortuStandUp.gif');
+            enemyImg = loadImage('imagenes/personajes/RATACOPTERO.gif');
+
+            characterImages["green"] = {
+                stand: loadImage('imagenes/personajes/tortuStandUp.gif'),
+                left: loadImage('imagenes/personajes/caminataIzq.gif'),
+                right: loadImage('imagenes/personajes/caminataDer.gif'),
+                select: loadImage('imagenes/personajes/tortu.svg'),
+                dead: loadImage('imagenes/personajes/tortufail.gif')
+            };
+            characterImages["blue"] = {
+                stand: loadImage('imagenes/personajes/ratacoptero.svg'),
+                left: loadImage('imagenes/personajes/ratacoptero.svg'),
+                right: loadImage('imagenes/personajes/ratacoptero.svg'),
+                select: loadImage('imagenes/personajes/ratacoptero.svg'),
+                dead: loadImage('imagenes/personajes/ratacopteroDead.svg')
+            };
+            characterImages["red"] = {
+                stand: loadImage('imagenes/personajes/tortuStandUp.gif'),
+                left: loadImage('imagenes/personajes/caminataIzq.gif'),
+                right: loadImage('imagenes/personajes/caminataDer.gif'),
+                select: loadImage('/imagenes/personajes/tortu.svg'),
+                dead: loadImage('imagenes/personajes/tortufail.gif')
+            };
+            characterImages["yellow"] = {
+                stand: loadImage('imagenes/personajes/ratacoptero.svg'),
+                left: loadImage('imagenes/personajes/ratacoptero.svg'),
+                right: loadImage('imagenes/personajes/ratacoptero.svg'),
+                select: loadImage('imagenes/personajes/ratacoptero.svg'),
+                dead: loadImage('imagenes/personajes/ratacopteroDead.svg')
+            };
+            characterImages["purple"] = {
+                stand: loadImage('imagenes/personajes/tortuStandUp.gif'),
+                left: loadImage('imagenes/personajes/caminataIzq.gif'),
+                right: loadImage('imagenes/personajes/caminataDer.gif'),
+                select: loadImage('imagenes/personajes/tortu.svg'),
+                dead: loadImage('imagenes/personajes/tortufail.gif')
+            };
+
+            initializeGame();
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+
+        function initializeGame() {
+            player = new Player();
+            enemy = new Enemy();
+            startTime = millis();
+            totalPausedTime = 0;
+            fallingObjects = [];
+            score = 0;
+            health = 100;
+            difficultyLevel = 1;
+            currentBackgroundIndex = 0;
+            currentPlayingBackground = playingBackgrounds[currentBackgroundIndex];
+            playerDead = false;
+            deathTime = 0;
+            inventory = {
+                botella: 0,
+                caja: 0,
+                banano: 0,
+                hueso:0
+            };
+        }
+
+        function draw() {
+            clear();
+
+            switch (gameState) {
+                case "menu":
+                    document.body.style.backgroundImage = `url(${menuBackground})`;
+                    drawMenu();
+                    break;
+                case "characterSelect":
+                    document.body.style.backgroundImage = `url(${characterSelectBackground})`;
+                    drawCharacterSelect();
+                    break;
+                case "playing":
+                    document.body.style.backgroundImage = `url(${currentPlayingBackground})`;
+                    updateGame();
+                    break;
+                case "gameOver":
+                    document.body.style.backgroundImage = `url(${gameOverBackground})`;
+                    drawGameOver();
+                    break;
+                case "paused":
+                    document.body.style.backgroundImage = `url(${pauseBackground})`;
+                    drawPauseScreen();
+                    break;
+            }
+        }
+
+        function updateGame() {
+            difficultyLevel = 1 + Math.floor(elapsedTime / 30000);
+
+            player.update();
+            player.display();
+
+            enemy.update();
+            enemy.display();
+
+            if (frameCount % Math.max(10, baseThrowRate - difficultyLevel * 2) === 0) {
+                enemy.throwObject();
+            }
+
+            for (let i = fallingObjects.length - 1; i >= 0; i--) {
+                let obj = fallingObjects[i];
+                obj.update();
+                obj.display();
+
+                if (obj.shouldRemove) {
+                    fallingObjects.splice(i, 1);
+                    continue;
+                }
+
+                if (obj.hits(player)) {
+                    if (obj.type === "good") {
+                        score += 10;
+                        if (score > maxScore) maxScore = score;
+                        if (score >= 100 && score % 100 === 0) {
+                            if (currentBackgroundIndex < playingBackgrounds.length - 1) {
+                                currentBackgroundIndex++;
+                                currentPlayingBackground = playingBackgrounds[currentBackgroundIndex];
+                            }
+                        }
+                        
+                        // Manejar objeto curativo
+                        if (obj.subtype === 'cura') {
+                            let missingHealth = 100 - health;
+                            health += missingHealth * 0.35; // Cura 10% de la vida faltante
+                            health = Math.min(health, 100); // Asegurar que no exceda el máximo
+                        } else {
+                            // Actualizar inventario normal
+                            if (obj.subtype === 'botella') inventory.botella++;
+                            else if (obj.subtype === 'caja') inventory.caja++;
+                            else if (obj.subtype === 'banano') inventory.banano++;
+                            else if (obj.subtype === 'hueso') inventory.hueso++;
+                        }
+                    } else {
+                        health -= 20;
+                        if (health <= 0) {
+                            health = 0;
+                            if (!playerDead) {
+                                playerDead = true;
+                                deathTime = millis();
+                            }
+                        }
+                    }
+                    fallingObjects.splice(i, 1);
+                }
+            }
+
+            if (playerDead && millis() - deathTime >= 2000) {
+                gameState = "gameOver";
+            }
+
+            fill(textColor);
+            textSize(height * 0.04);
+            textAlign(RIGHT, TOP);
+            text("Score: " + score, width * 0.98, height * 0.02);
+            text("Max Score: " + maxScore, width * 0.98, height * 0.06);
+
+            fill(255, 0, 0);
+            rect(width * 0.02, height * 0.02, width * 0.2, height * 0.02);
+            fill(0, 255, 0);
+            rect(width * 0.02, height * 0.02, map(health, 0, 100, 0, width * 0.2), height * 0.02);
+
+            textAlign(LEFT, TOP);
+            textSize(height * 0.03);
+            fill(textColor);
+            text(`Botellas: ${inventory.botella}`, width * 0.02, height * 0.12);
+            text(`Cajas: ${inventory.caja}`, width * 0.02, height * 0.15);
+            text(`Bananas: ${inventory.banano}`, width * 0.02, height * 0.18);
+            text(`Huesos: ${inventory.hueso}`, width * 0.02, height * 0.21);
+
+            elapsedTime = millis() - startTime - totalPausedTime;
+            let seconds = Math.floor(elapsedTime / 1000);
+            textAlign(LEFT, TOP);
+            text("Time: " + seconds + "s", width * 0.02, height * 0.05);
+            text("Level: " + difficultyLevel, width * 0.02, height * 0.08);
+        }
+
+        function drawMenu() {
+            fill(0, 0, 0, 150);
+            rect(0, 0, width, height);
+
+            textSize(height * 0.06);
+            fill(255, 0, 0);
+            textAlign(CENTER, CENTER);
+            text("Nature Collector Game", width / 2, height / 2 - height * 0.1);
+            textSize(height * 0.04);
+            fill("#00d91e");
+            text("Press SPACE to Start", width / 2, height / 2);
+        }
+
+        function drawCharacterSelect() {
+            fill(0, 0, 0, 150);
+            rect(0, 0, width, height);
+
+            textSize(height * 0.06);
+            fill(textColor);
+            textAlign(CENTER, CENTER);
+            text("Select Your Character", width / 2, height / 2 - height * 0.15);
+            text("Press R to Reset Max Score", width / 2, height / 2 + height * 0.2);
+
+            for (let i = 0; i < characters.length; i++) {
+                let char = characters[i];
+                let x = width / 2 - width * 0.3 + i * width * 0.15;
+                let y = height / 2;
+                let img = characterImages[char].select;
+                let aspectRatio = img.width / img.height;
+                let displayWidth = characterSelectSize.width;
+                let displayHeight = characterSelectSize.width / aspectRatio;
+
+                image(img, x - displayWidth / 2, y + 20, displayWidth, displayHeight);
+
+                if (char === selectedCharacter) {
+                    noFill();
+                    stroke(borderColor);
+                    strokeWeight(4);
+                    rect(x - displayWidth / 2, y + 20, displayWidth, displayHeight);
+                }
+            }
+            text("Press ENTER to Start", width / 2, height / 2 );
+        }
+
+        function drawGameOver() {
+            fill(0, 0, 0, 150);
+            rect(0, 0, width, height);
+
+            textSize(height * 0.06);
+            fill(255, 0, 0);
+            textAlign(CENTER, CENTER);
+            text("Game Over", width / 2, height / 2 - height * 0.1);
+            textSize(height * 0.04);
+            text("Score: " + score, width / 2, height / 2);
+            text("Max Score: " + maxScore, width / 2, height / 2 + height * 0.05);
+            text("Press R to Restart", width / 2, height / 2 + height * 0.1);
+            text("Press M to Menu", width / 2, height / 2 + height * 0.15);
+        }
+
+        function drawPauseScreen() {
+            fill(0, 0, 0, 150);
+            rect(0, 0, width, height);
+
+            textSize(height * 0.06);
+            fill(textColor);
+            textAlign(CENTER, CENTER);
+            text("Paused", width / 2, height / 2 - height * 0.1);
+            textSize(height * 0.04);
+            text("Press ESC to Resume", width / 2, height / 2);
+            text("Press M to Menu", width / 2, height / 2 + height * 0.1);
+        }
+
+        function keyPressed() {
+            switch (gameState) {
+                case "menu":
+                    if (key === " ") {
+                        gameState = "characterSelect";
+                        initializeGame();
+                    }
+                    break;
+
+                case "characterSelect":
+                    if (keyCode === LEFT_ARROW || key === "a") {
+                        let index = characters.indexOf(selectedCharacter);
+                        selectedCharacter = characters[(index - 1 + characters.length) % characters.length];
+                    } else if (keyCode === RIGHT_ARROW || key === "d") {
+                        let index = characters.indexOf(selectedCharacter);
+                        selectedCharacter = characters[(index + 1) % characters.length];
+                    } else if (keyCode === ENTER) {
+                        gameState = "playing";
+                        startTime = millis();
+                        totalPausedTime = 0;
+                    } else if (key === "r") {
+                        maxScore = 0;
+                    }
+                    break;
+
+                case "playing":
+                    if (!playerDead) {
+                        if (keyCode === LEFT_ARROW || key === "a") moveLeft = true;
+                        else if (keyCode === RIGHT_ARROW || key === "d") moveRight = true;
+                        else if ((keyCode === UP_ARROW || key === "w" || key === " ") && player.isOnGround()) player.jump();
+                        else if (keyCode === ESCAPE) {
+                            gameState = "paused";
+                            pauseStartTime = millis();
+                        }
+                    }
+                    break;
+
+                case "gameOver":
+                    if (key === "r") resetGame();
+                    else if (key === "m") {
+                        gameState = "menu";
+                        initializeGame();
+                    }
+                    break;
+
+                case "paused":
+                    if (keyCode === ESCAPE) {
+                        gameState = "playing";
+                        totalPausedTime += millis() - pauseStartTime;
+                    } else if (key === "m") {
+                        gameState = "menu";
+                        initializeGame();
+                    }
+                    break;
+            }
+        }
+
+        function keyReleased() {
+            if (keyCode === LEFT_ARROW || key === "a") moveLeft = false;
+            else if (keyCode === RIGHT_ARROW || key === "d") moveRight = false;
+        }
+
+        function resetGame() {
+            initializeGame();
+            gameState = "playing";
+        }
+
+        class Player {
+            constructor() {
+                this.x = width / 2;
+                this.y = height - 50;
+                this.size = playerSize;
+                this.speed = 7;
+                this.yVelocity = 0;
+                this.isJumping = false;
+                this.displayHeight = 0;
+                this.currentImage = characterImages[selectedCharacter].stand;
+            }
+
+            update() {
+                const img = this.currentImage;
+                const aspectRatio = img.width / img.height;
+                this.displayHeight = this.size.width / aspectRatio;
+
+                this.yVelocity += gravity;
+                this.y += this.yVelocity;
+
+                this.x = constrain(this.x, 0, width - this.size.width);
+                this.y = constrain(this.y, 0, height - this.displayHeight);
+
+                if (this.y >= height - this.displayHeight - 50) {
+                    this.y = height - this.displayHeight - 50;
+                    this.yVelocity = 0;
+                    this.isJumping = false;
+                }
+
+                if (!playerDead) {
+                    if (moveLeft) {
+                        this.move(-1);
+                        this.currentImage = characterImages[selectedCharacter].left;
+                    } else if (moveRight) {
+                        this.move(1);
+                        this.currentImage = characterImages[selectedCharacter].right;
+                    } else {
+                        this.currentImage = characterImages[selectedCharacter].stand;
+                    }
+                }
+
+                if (playerDead) {
+                    this.currentImage = characterImages[selectedCharacter].dead;
+                }
+            }
+
+            move(direction) {
+                this.x += direction * this.speed;
+            }
+
+            jump() {
+                if (!this.isJumping) {
+                    this.yVelocity = -15;
+                    this.isJumping = true;
+                }
+            }
+
+            isOnGround() {
+                return this.y >= height - this.displayHeight - 150;
+            }
+
+            display() {
+                let img = this.currentImage;
+                let aspectRatio = img.width / img.height;
+                let displayWidth = this.size.width;
+                let displayHeight = displayWidth / aspectRatio;
+                image(img, this.x, this.y, displayWidth, displayHeight);
+            }
+        }
+
+        class Enemy {
+            constructor() {
+                this.x = width / 2;
+                this.y = height * 0.05;
+                this.size = enemySize;
+                this.speed = baseEnemySpeed;
+                this.direction = 1;
+            }
+
+            update() {
+                this.speed = baseEnemySpeed + difficultyLevel * 0.5;
+
+                this.x += this.direction * this.speed;
+                if (this.x <= 0 || this.x >= width - this.size.width) {
+                    this.direction *= -1;
+                }
+
+                if (random() < 0.01) {
+                    this.direction *= -1;
+                }
+            }
+
+            display() {
+                let aspectRatio = enemyImg.width / enemyImg.height;
+                let displayWidth = this.size.width;
+                let displayHeight = this.size.width / aspectRatio;
+                image(enemyImg, this.x, this.y, displayWidth, displayHeight);
+            }
+
+            throwObject() {
+                let type = random() < 0.6 ? "bad" : "good";
+                let obj;
+                
+                if (type === "good") {
+                    // 10% de probabilidad de que sea objeto curativo
+                    if (random() < 0.25) {
+                        let cura = goodObjectsImages.find(img => img.subtype === 'cura');
+                        obj = new FallingObject(
+                            this.x + this.size.width / 2,
+                            this.y + this.size.height,
+                            type,
+                            cura.img,
+                            cura.subtype
+                        );
+                    } else {
+                        let regularItems = goodObjectsImages.filter(img => img.subtype !== 'cura');
+                        let selected = random(regularItems);
+                        obj = new FallingObject(
+                            this.x + this.size.width / 2,
+                            this.y + this.size.height,
+                            type,
+                            selected.img,
+                            selected.subtype
+                        );
+                    }
+                } else {
+                    obj = new FallingObject(
+                        this.x + this.size.width / 2,
+                        this.y + this.size.height,
+                        type,
+                        random(badObjectsImages)
+                    );
+                }
+                
+                obj.speed = baseObjectSpeed + difficultyLevel * 0.5;
+                fallingObjects.push(obj);
+            }
+        }
+
+        class FallingObject {
+            constructor(x, y, type, img, subtype = null) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.img = img;
+                this.subtype = subtype;
+                this.speed = baseObjectSpeed;
+                this.landed = false;
+                this.landedTime = 0;
+                this.shouldRemove = false;
+                
+                this.aspectRatio = this.img.width / this.img.height;
+                this.width = objectSize.width;
+                this.height = objectSize.width / this.aspectRatio;
+            }
+
+            update() {
+                if (!this.landed) {
+                    this.y += this.speed;
+                    
+                    if (this.type === "good") {
+                        if (this.y + this.height >= height - 50) {
+                            this.landed = true;
+                            this.landedTime = millis();
+                            this.y = height - 50 - this.height;
+                        }
+                    } else {
+                        if (this.y + this.height >= height) {
+                            this.shouldRemove = true;
+                        }
+                    }
+                } else {
+                    if (millis() - this.landedTime >= 5000) {
+                        this.shouldRemove = true;
+                    }
+                }
+            }
+
+            display() {
+                image(this.img, this.x - this.width/2, this.y, this.width, this.height);
+            }
+
+            hits(player) {
+                let playerLeft = player.x;
+                let playerRight = player.x + player.size.width;
+                let playerTop = player.y;
+                let playerBottom = player.y + player.displayHeight;
+
+                let objLeft = this.x - this.width/2;
+                let objRight = this.x + this.width/2;
+                let objTop = this.y;
+                let objBottom = this.y + this.height;
+
+                return !(objRight < playerLeft || 
+                        objLeft > playerRight || 
+                        objBottom < playerTop || 
+                        objTop > playerBottom);
+            }
+        }
+    </script>
+</body>
+</html>
