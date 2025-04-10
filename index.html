@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nature Collector Game</title>
+    <title>Beta Guardianes Verdes</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
         body {
@@ -178,7 +178,7 @@
                 stand: loadImage('imagenes/personajes/wonejo.gif'),
                 left: loadImage('imagenes/personajes/wonejocaminataizq.gif'),
                 right: loadImage('imagenes/personajes/wonejocaminatader.gif'),
-                select: loadImage('/imagenes/personajes/wonejoquieto.svg'),
+                select: loadImage('imagenes/personajes/wonejoquieto.svg'),
                 dead: loadImage('imagenes/personajes/wonejodie.gif')
             };
             characterImages["yellow"] = {
@@ -344,8 +344,8 @@
             fill(textColor);
             textSize(height * 0.04);
             textAlign(RIGHT, TOP);
-            text("Score: " + score, width * 0.98, height * 0.02);
-            text("Max Score: " + maxScore, width * 0.98, height * 0.06);
+            text("Puntuación: " + score, width * 0.98, height * 0.02);
+            text("Puntuación Máxima: " + maxScore, width * 0.98, height * 0.06);
 
             fill(255, 0, 0);
             rect(width * 0.02, height * 0.02, width * 0.2, height * 0.02);
