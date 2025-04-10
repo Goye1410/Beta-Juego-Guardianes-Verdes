@@ -21,9 +21,28 @@
             max-height: 100%;
             background: transparent;
         }
+        #audio-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            z-index: 100;
+        }
     </style>
 </head>
 <body>
+    <!-- Elemento de audio para la música de fondo -->
+    <audio id="bg-music" loop autoplay>
+        <source src="imagenes/assets/musicafondo.mp3" type="audio/mpeg">
+        Tu navegador no soporta el elemento de audio.
+    </audio>
+    
+    <div id="audio-controls">Música: ON (P para mutear)</div>
+    
     <script>
         let player;
         let fallingObjects = [];
@@ -70,7 +89,8 @@
         let playingBackgrounds = [
             'imagenes/fondos/escenariov1.svg',
             'imagenes/fondos/escenariov2.svg',
-            'imagenes/fondos/escenariov3.svg'
+            'imagenes/fondos/escenariov3.svg',
+            'imagenes/fondos/playa.svg'
         ];
         let currentBackgroundIndex = 0;
         let currentPlayingBackground = playingBackgrounds[currentBackgroundIndex];
@@ -82,9 +102,47 @@
         let deathTime = 0;
         let deathImage;
 
+        // Variables para control de audio
+        let bgMusic;
+        let isMuted = false;
+        let audioControls;
+
+         // Esta función se ejecutará cuando la ventana se haya cargado completamente
+         window.onload = function() {
+            bgMusic = document.getElementById('bg-music');
+            bgMusic.volume = 0.1; // Volumen moderado
+            audioControls = document.getElementById('audio-controls');
+            
+            // Intentar reproducir la música (puede requerir interacción del usuario en algunos navegadores)
+            let playPromise = bgMusic.play();
+            
+            // Manejar posibles errores de autoplay
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    // Mostrar mensaje para que el usuario interactúe
+                    audioControls.innerHTML = 'Click para activar música';
+                    // Configurar un evento de click para iniciar la música
+                    document.body.addEventListener('click', initAudio, {once: true});
+                });
+            }
+        };
+
+        function initAudio() {
+            bgMusic.play();
+            updateAudioControls();
+        }
+
         function setup() {
             createCanvas(windowWidth, windowHeight).style('background: transparent');
             imageMode(CORNER);
+
+            // Obtener referencia al elemento de audio
+            bgMusic = document.getElementById('bg-music');
+            bgMusic.volume = 0.1; // Establecer volumen moderado
+            
+            // Configurar controles de audio
+            audioControls = document.getElementById('audio-controls');
+            updateAudioControls();
 
             goodObjectsImages = [
                 { img: loadImage('imagenes/assets/botella.gif'), subtype: 'botella' },
@@ -110,35 +168,54 @@
                 dead: loadImage('imagenes/personajes/tortufail.gif')
             };
             characterImages["blue"] = {
-                stand: loadImage('imagenes/personajes/ratacoptero.svg'),
-                left: loadImage('imagenes/personajes/ratacoptero.svg'),
-                right: loadImage('imagenes/personajes/ratacoptero.svg'),
-                select: loadImage('imagenes/personajes/ratacoptero.svg'),
-                dead: loadImage('imagenes/personajes/ratacopteroDead.svg')
+                stand: loadImage('imagenes/personajes/cuerpospinpie.gif'),
+                left: loadImage('imagenes/personajes/ratacorriendoizq.gif'),
+                right: loadImage('imagenes/personajes/ratacorriendoder.gif'),
+                select: loadImage('imagenes/personajes/spin.svg'),
+                dead: loadImage('imagenes/personajes/cuerpospindie.gif')
             };
             characterImages["red"] = {
-                stand: loadImage('imagenes/personajes/tortuStandUp.gif'),
-                left: loadImage('imagenes/personajes/caminataIzq.gif'),
-                right: loadImage('imagenes/personajes/caminataDer.gif'),
-                select: loadImage('/imagenes/personajes/tortu.svg'),
-                dead: loadImage('imagenes/personajes/tortufail.gif')
+                stand: loadImage('imagenes/personajes/wonejo.gif'),
+                left: loadImage('imagenes/personajes/wonejocaminataizq.gif'),
+                right: loadImage('imagenes/personajes/wonejocaminatader.gif'),
+                select: loadImage('/imagenes/personajes/wonejoquieto.svg'),
+                dead: loadImage('imagenes/personajes/wonejodie.gif')
             };
             characterImages["yellow"] = {
-                stand: loadImage('imagenes/personajes/ratacoptero.svg'),
-                left: loadImage('imagenes/personajes/ratacoptero.svg'),
-                right: loadImage('imagenes/personajes/ratacoptero.svg'),
-                select: loadImage('imagenes/personajes/ratacoptero.svg'),
-                dead: loadImage('imagenes/personajes/ratacopteroDead.svg')
+                stand: loadImage('imagenes/personajes/ada.gif'),
+                left: loadImage('imagenes/personajes/adacaminataizq.gif'),
+                right: loadImage('imagenes/personajes/adacaminatader.gif'),
+                select: loadImage('imagenes/personajes/ada.svg'),
+                dead: loadImage('imagenes/personajes/adadie.gif')
             };
             characterImages["purple"] = {
-                stand: loadImage('imagenes/personajes/tortuStandUp.gif'),
-                left: loadImage('imagenes/personajes/caminataIzq.gif'),
-                right: loadImage('imagenes/personajes/caminataDer.gif'),
-                select: loadImage('imagenes/personajes/tortu.svg'),
-                dead: loadImage('imagenes/personajes/tortufail.gif')
+                stand: loadImage('imagenes/personajes/capibarapie.gif'),
+                left: loadImage('imagenes/personajes/caminataCapibaraIzq.gif'),
+                right: loadImage('imagenes/personajes/caminataCapibarader.gif'),
+                select: loadImage('imagenes/personajes/capibara.svg'),
+                dead: loadImage('imagenes/personajes/capibaradie.gif')
             };
 
             initializeGame();
+        }
+
+        function updateAudioControls() {
+            if (isMuted) {
+                audioControls.innerHTML = 'Música: OFF (P para activar)';
+            } else {
+                audioControls.innerHTML = 'Música: ON (P para mutear)';
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            bgMusic.volume = isMuted ? 0 : 0.1;
+            updateAudioControls();
+            
+            // Si estaba muteado y ahora no lo está, y estamos en juego, reproducir
+            if (!isMuted && gameState === "playing") {
+                bgMusic.play();
+            }
         }
 
         function windowResized() {
@@ -164,6 +241,12 @@
                 banano: 0,
                 hueso:0
             };
+            
+            // Iniciar música si no está muteada
+            if (!isMuted) {
+                bgMusic.currentTime = 0;
+                bgMusic.play();
+            }
         }
 
         function draw() {
@@ -255,6 +338,7 @@
 
             if (playerDead && millis() - deathTime >= 2000) {
                 gameState = "gameOver";
+                bgMusic.pause();
             }
 
             fill(textColor);
@@ -279,8 +363,8 @@
             elapsedTime = millis() - startTime - totalPausedTime;
             let seconds = Math.floor(elapsedTime / 1000);
             textAlign(LEFT, TOP);
-            text("Time: " + seconds + "s", width * 0.02, height * 0.05);
-            text("Level: " + difficultyLevel, width * 0.02, height * 0.08);
+            text("Tiempo: " + seconds + "s", width * 0.02, height * 0.05);
+            text("Dificultad: " + difficultyLevel, width * 0.02, height * 0.08);
         }
 
         function drawMenu() {
@@ -290,10 +374,10 @@
             textSize(height * 0.06);
             fill(255, 0, 0);
             textAlign(CENTER, CENTER);
-            text("Nature Collector Game", width / 2, height / 2 - height * 0.1);
+            text("Guardianes Verdes", width / 2, height / 2 - height * 0.1);
             textSize(height * 0.04);
             fill("#00d91e");
-            text("Press SPACE to Start", width / 2, height / 2);
+            text("Presiona ESPACIO para comenzar", width / 2, height / 2);
         }
 
         function drawCharacterSelect() {
@@ -303,8 +387,8 @@
             textSize(height * 0.06);
             fill(textColor);
             textAlign(CENTER, CENTER);
-            text("Select Your Character", width / 2, height / 2 - height * 0.15);
-            text("Press R to Reset Max Score", width / 2, height / 2 + height * 0.2);
+            text("Selecciona a tu GUARDIAN", width / 2, height / 2 - height * 0.15);
+            text("Presiona R para reiniciar la puntuación", width / 2, height / 2 + height * 0.2);
 
             for (let i = 0; i < characters.length; i++) {
                 let char = characters[i];
@@ -324,7 +408,7 @@
                     rect(x - displayWidth / 2, y + 20, displayWidth, displayHeight);
                 }
             }
-            text("Press ENTER to Start", width / 2, height / 2 );
+            text("Presiona ENTER para jugar", width / 2, height / 2 );
         }
 
         function drawGameOver() {
@@ -336,10 +420,10 @@
             textAlign(CENTER, CENTER);
             text("Game Over", width / 2, height / 2 - height * 0.1);
             textSize(height * 0.04);
-            text("Score: " + score, width / 2, height / 2);
-            text("Max Score: " + maxScore, width / 2, height / 2 + height * 0.05);
-            text("Press R to Restart", width / 2, height / 2 + height * 0.1);
-            text("Press M to Menu", width / 2, height / 2 + height * 0.15);
+            text("Puntuación: " + score, width / 2, height / 2);
+            text("Máxima puntuación: " + maxScore, width / 2, height / 2 + height * 0.05);
+            text("Presiona R para reiniciar", width / 2, height / 2 + height * 0.1);
+            text("Presiona M para volver al menú", width / 2, height / 2 + height * 0.15);
         }
 
         function drawPauseScreen() {
@@ -351,11 +435,18 @@
             textAlign(CENTER, CENTER);
             text("Paused", width / 2, height / 2 - height * 0.1);
             textSize(height * 0.04);
-            text("Press ESC to Resume", width / 2, height / 2);
-            text("Press M to Menu", width / 2, height / 2 + height * 0.1);
+            text("Presiona ESC para seguir", width / 2, height / 2);
+            text("Presiona M para volver al menú", width / 2, height / 2 + height * 0.1);
+            text("Presiona P para mutear/desmutear", width / 2, height / 2 + height * 0.15);
         }
 
         function keyPressed() {
+            // Control de mute con P (funciona en todos los estados)
+            if (key === 'p' || key === 'P') {
+                toggleMute();
+                return; // Evita que se procesen otras teclas
+            }
+
             switch (gameState) {
                 case "menu":
                     if (key === " ") {
@@ -375,6 +466,7 @@
                         gameState = "playing";
                         startTime = millis();
                         totalPausedTime = 0;
+                        if (!isMuted) bgMusic.play();
                     } else if (key === "r") {
                         maxScore = 0;
                     }
@@ -388,6 +480,7 @@
                         else if (keyCode === ESCAPE) {
                             gameState = "paused";
                             pauseStartTime = millis();
+                            bgMusic.pause();
                         }
                     }
                     break;
@@ -404,6 +497,7 @@
                     if (keyCode === ESCAPE) {
                         gameState = "playing";
                         totalPausedTime += millis() - pauseStartTime;
+                        if (!isMuted) bgMusic.play();
                     } else if (key === "m") {
                         gameState = "menu";
                         initializeGame();
@@ -420,6 +514,7 @@
         function resetGame() {
             initializeGame();
             gameState = "playing";
+            if (!isMuted) bgMusic.play();
         }
 
         class Player {
